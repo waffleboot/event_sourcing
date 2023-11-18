@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 type EventKind int
 
 const (
@@ -12,5 +14,25 @@ const (
 type Event struct {
 	Kind      EventKind
 	Money     Money
-	AccountId int
+	EventId   int
+	AccountId AccountId
+}
+
+func (e Event) String() string {
+	return fmt.Sprintf("{kind=%v eventId=%d}", e.Kind, e.EventId)
+}
+
+func (k EventKind) String() string {
+	switch k {
+	case UnknownEvent:
+		return "unknown"
+	case InitializeEvent:
+		return "initialize"
+	case DepositEvent:
+		return "deposit"
+	case WithdrawEvent:
+		return "withdraw"
+	default:
+		return "unknown"
+	}
 }

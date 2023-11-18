@@ -4,20 +4,22 @@ import (
 	"fmt"
 )
 
+type AccountId int64
+
 type Account struct {
-	State  AccountState
+	state  accountState
 	Events []Event
 }
 
-type AccountState struct {
-	AccountId int
-	Version   int
-	Money     Money
+type accountState struct {
+	accountId AccountId
+	version   int
+	money     Money
 }
 
-func CreateAccount() *Account {
+func CreateAccount(accountId AccountId) *Account {
 	account := new(Account)
-	account.initialize()
+	account.initialize(accountId)
 	return account
 }
 
@@ -32,7 +34,7 @@ func RestoreAccount(events []Event) (*Account, error) {
 	return account, nil
 }
 
-func (s *AccountState) applyEvent(event Event) error {
+func (s *accountState) applyEvent(event Event) error {
 	switch event.Kind {
 	case InitializeEvent:
 		s.initialize(event)
@@ -48,48 +50,60 @@ func (s *AccountState) applyEvent(event Event) error {
 
 func (s *Account) appendEvent(event Event) error {
 	s.Events = append(s.Events, event)
-	return s.State.applyEvent(event)
+	return s.state.applyEvent(event)
 }
 
-func (s *AccountState) initialize(event Event) {
-	s.AccountId = event.AccountId
-	s.Version = 0
+func (s *accountState) initialize(event Event) {
+	s.accountId = event.AccountId
+	s.version = 0
 }
 
-func (s *AccountState) depositMoney(event Event) {
-	s.Money.Amount += event.Money.Amount
-	s.Version++
+func (s *accountState) depositMoney(event Event) {
+	s.money.Amount += event.Money.Amount
+	s.version++
 }
 
-func (s *AccountState) withdrawMoney(event Event) {
-	s.Money.Amount -= event.Money.Amount
-	s.Version++
+func (s *accountState) withdrawMoney(event Event) {
+	s.money.Amount -= event.Money.Amount
+	s.version++
 }
 
-func (s *Account) initialize() {
+func (s *Account) initialize(accountId AccountId) {
 	s.appendEvent(Event{
 		Kind:      InitializeEvent,
 		Money:     Money{},
-		AccountId: 0,
+		AccountId: accountId,
 	})
 }
 
 func (s *Account) DepositMoney(money Money) {
 	s.appendEvent(Event{
-		AccountId: s.State.AccountId,
+		AccountId: s.state.accountId,
 		Kind:      DepositEvent,
 		Money:     money,
 	})
 }
 
 func (s *Account) WithdrawMoney(money Money) error {
-	if s.State.Money.Amount < money.Amount {
-		return fmt.Errorf("not enough money: ", s.State.Money.Amount)
+	if s.state.money.Amount < money.Amount {
+		return fmt.Errorf("not enough money: %d", s.state.money.Amount)
 	}
 	s.appendEvent(Event{
-		AccountId: s.State.AccountId,
+		AccountId: s.state.accountId,
 		Kind:      WithdrawEvent,
 		Money:     money,
 	})
 	return nil
+}
+
+func (s *Account) Id() AccountId {
+	return s.state.accountId
+}
+
+func (s *Account) Amount() Amount {
+	return s.state.money.Amount
+}
+
+func (s *Account) Version() int {
+	return s.state.version
 }
