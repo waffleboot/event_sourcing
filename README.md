@@ -1,0 +1,2 @@
+Пример с event sourcing
+
